@@ -3,25 +3,22 @@ import { openai } from '@ai-sdk/openai';
 import { streamText } from 'ai';
 
 export async function linkedInAgent(
-	request: AgentRequest
+	_request: AgentRequest
 ): Promise<AgentResponse> {
-	const fineTunedModel = process.env.OPENAI_FINETUNED_MODEL;
+	// TODO: Step 1 - Get the fine-tuned model ID
+	// Access process.env.OPENAI_FINETUNED_MODEL
+	// If not configured, throw an error
 
-	if (!fineTunedModel) {
-		throw new Error('OPENAI_FINETUNED_MODEL not configured');
-	}
+	// TODO: Step 2 - Build the system prompt
+	// Include instructions for the LinkedIn agent
+	// Add the original user request and refined query for context
+	// Tell the model to use the refined query to understand intent
 
-	const systemPrompt = `You are a professional assistant helping with LinkedIn and career-related questions.
+	// TODO: Step 3 - Stream the response
+	// Use streamText() from 'ai' package
+	// Pass the fine-tuned model using openai()
+	// Include the system prompt and conversation messages
+	// Return the stream
 
-Original User Request: "${request.originalQuery}"
-
-Refined Query: "${request.query}"
-
-Use the refined query to understand what the user is asking for, and provide a helpful response based on the conversation history.`;
-
-	return streamText({
-		model: openai(fineTunedModel),
-		system: systemPrompt,
-		messages: request.messages,
-	});
+	throw new Error('LinkedIn agent not implemented');
 }

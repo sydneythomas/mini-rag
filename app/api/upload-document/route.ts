@@ -8,60 +8,51 @@ const uploadDocumentSchema = z.object({
 	urls: z.array(z.string().url()).min(1),
 });
 
-export async function POST(req: NextRequest) {
+export async function POST(_req: NextRequest) {
 	try {
-		const body = await req.json();
-		const parsed = uploadDocumentSchema.parse(body);
-		const { urls } = parsed;
+		// TODO: Step 1 - Parse and validate the request body
+		// Use uploadDocumentSchema.parse() to validate the incoming request
+		// Extract the 'urls' array from the parsed body
 
-		// Step 1: Scrape and chunk the content
-		const processor = new DataProcessor();
-		const chunks = await processor.processUrls(urls);
+		// TODO: Step 2 - Scrape and chunk the content
+		// Create a new DataProcessor instance
+		// Use processor.processUrls() to scrape and chunk the URLs
+		// This returns an array of text chunks with metadata
 
-		if (chunks.length === 0) {
-			return NextResponse.json(
-				{ error: 'No content found to process' },
-				{ status: 400 }
-			);
-		}
+		// TODO: Step 3 - Check if we got any content
+		// If chunks.length === 0, return an error response
+		// Status should be 400 with appropriate error message
 
-		// Step 2: Generate embeddings and upload to Pinecone
-		const index = pineconeClient.Index(process.env.PINECONE_INDEX!);
-		const batchSize = 100;
-		let successCount = 0;
+		// TODO: Step 4 - Get Pinecone index
+		// Use pineconeClient.Index() to get your index
+		// The index name comes from process.env.PINECONE_INDEX
 
-		for (let i = 0; i < chunks.length; i += batchSize) {
-			const batch = chunks.slice(i, i + batchSize);
+		// TODO: Step 5 - Process chunks in batches
+		// Pinecone recommends batching uploads (100 at a time)
+		// Loop through chunks in batches
 
-			// Generate embeddings
-			const embeddingResponse = await openaiClient.embeddings.create({
-				model: 'text-embedding-3-small',
-				input: batch.map((chunk) => chunk.content),
-			});
+		// TODO: Step 6 - Generate embeddings for each batch
+		// Use openaiClient.embeddings.create()
+		// Model: 'text-embedding-3-small'
+		// Input: array of chunk.content strings
 
-			// Prepare vectors for Pinecone
-			const vectors = batch.map((chunk, idx) => ({
-				id: `${chunk.metadata.url}-${chunk.metadata.chunkIndex}`,
-				values: embeddingResponse.data[idx].embedding,
-				metadata: {
-					text: chunk.content,
-					url: chunk.metadata.url || '',
-					title: chunk.metadata.title || '',
-					chunkIndex: chunk.metadata.chunkIndex || 0,
-					totalChunks: chunk.metadata.totalChunks || 0,
-				},
-			}));
+		// TODO: Step 7 - Prepare vectors for Pinecone
+		// Map each chunk to a vector object with:
+		// - id: unique identifier (e.g., url + chunkIndex)
+		// - values: the embedding array
+		// - metadata: { text, url, title, chunkIndex, totalChunks }
 
-			// Upload to Pinecone
-			await index.upsert(vectors);
-			successCount += batch.length;
-		}
+		// TODO: Step 8 - Upload to Pinecone
+		// Use index.upsert() to upload the batch
+		// Track successful uploads
 
-		return NextResponse.json({
-			success: true,
-			chunksProcessed: chunks.length,
-			vectorsUploaded: successCount,
-		});
+		// TODO: Step 9 - Return success response
+		// Return JSON with success status and counts
+
+		return NextResponse.json(
+			{ error: 'Upload route not implemented' },
+			{ status: 501 }
+		);
 	} catch (error) {
 		console.error('Error uploading documents:', error);
 		return NextResponse.json(
