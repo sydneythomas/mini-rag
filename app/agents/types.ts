@@ -16,10 +16,10 @@ export interface AgentRequest {
 	type: AgentType;
 	query: string; // Refined/summarized query from selector
 	originalQuery: string; // Original user message
-	messages: Message[]; // Full conversation history
+	messages: Message[]; // Conversation history
 }
 
-export type AgentResponse = StreamTextResult<Record<string, never>>;
+export type AgentResponse = StreamTextResult<Record<string, never>, unknown>;
 
 export interface AgentConfig {
 	name: string;

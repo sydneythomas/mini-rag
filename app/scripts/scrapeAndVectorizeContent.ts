@@ -84,13 +84,16 @@ async function scrapeAndVectorize(urls: string[]) {
 		for (let i = 0; i < chunks.length; i += batchSize) {
 			const batch = chunks.slice(i, i + batchSize);
 			console.log(
-				`Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(chunks.length / batchSize)}...`
+				`Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(
+					chunks.length / batchSize
+				)}...`
 			);
 
 			try {
 				// Generate embeddings for the batch
 				const embeddingResponse = await openaiClient.embeddings.create({
 					model: 'text-embedding-3-small',
+					dimensions: 512,
 					input: batch.map((chunk) => chunk.content),
 				});
 
@@ -131,15 +134,27 @@ async function scrapeAndVectorize(urls: string[]) {
 }
 
 async function main() {
+	// Validated URLs that work with the scraper
 	const urls = [
-		'https://nextjs.org/docs/getting-started',
+		// React (Top tier - rich content)
 		'https://react.dev/learn',
-		'https://www.typescriptlang.org/docs/',
-		'https://www.typescriptlang.org/docs/handbook/2/mapped-types.html',
-		'https://www.typescriptlang.org/docs/handbook/2/keyof-types.html',
-		'https://docs.pinecone.io/docs/overview',
-		'https://docs.pinecone.io/guides/index-data/create-an-index',
-		'https://nextjs.org/docs/app/getting-started/fetching-data',
+		'https://react.dev/reference/react/useState',
+		'https://react.dev/reference/react/useEffect',
+
+		// Next.js (Top tier)
+		'https://nextjs.org/docs/getting-started',
+		'https://nextjs.org/docs/app/building-your-application/routing',
+		'https://nextjs.org/docs/app/building-your-application/data-fetching',
+
+		// TypeScript (Top tier)
+		'https://www.typescriptlang.org/docs/handbook/2/basic-types.html',
+
+		// Vercel AI SDK (for agents)
+		'https://sdk.vercel.ai/docs/ai-sdk-core/generating-text',
+		'https://github.com/vercel/ai',
+
+		// Pinecone (GitHub README - works great!)
+		'https://github.com/pinecone-io/pinecone-ts-client',
 	];
 
 	await scrapeAndVectorize(urls);

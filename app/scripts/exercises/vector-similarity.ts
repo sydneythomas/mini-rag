@@ -62,22 +62,27 @@ export function cosineSimilarity(vectorA: number[], vectorB: number[]): number {
 export function findTopSimilarDocuments(
 	queryVector: number[],
 	documents: Document[],
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	minSimilarity: number = 0.7,
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	topK: number = 3
 ): Array<{ document: Document; similarity: number }> {
 	// TODO: Implement this function!
 
-	// 1. Calculate similarity between query and each document
+	// 1. Calculate cosine similarity between query and each document
+	const results = documents.map((doc) => ({
+		document: doc,
+		similarity: cosineSimilarity(queryVector, doc.embedding),
+	}));
 
 	// 2. Filter documents that have similarity >= minSimilarity
+	const filtered = results.filter(
+		(result) => result.similarity >= minSimilarity
+	);
 
 	// 3. Sort by similarity (highest first)
+	filtered.sort((a, b) => b.similarity - a.similarity);
 
 	// 4. Return top K results
-
-	return []; // Replace with your implementation
+	return filtered.slice(0, topK);
 }
 
 // Example test data for reference

@@ -9,17 +9,6 @@
  * as mathematical vectors. This enables semantic search - finding content by meaning
  * rather than exact keyword matches.
  *
- * HOW IT WORKS:
- * 1. Text content gets converted to embeddings (arrays of ~1500 numbers) using AI models
- * 2. These embeddings capture the semantic meaning of the text
- * 3. When searching, your query also gets converted to an embedding
- * 4. The database finds the most similar embeddings using mathematical distance
- * 5. This returns content that's semantically similar to your query
- *
- * EXAMPLE: Searching for "climate change" might return articles about:
- * - "global warming" (similar meaning, different words)
- * - "carbon emissions" (related concept)
- * - "environmental policy" (contextually related)
  *
  * Learn more: https://docs.pinecone.io/docs/overview
  *

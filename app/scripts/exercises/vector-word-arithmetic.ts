@@ -111,13 +111,15 @@ async function demonstrateWordArithmetic() {
 		'lady',
 		'ruler',
 		'monarch',
+		'pizza', // obviously wrong - should have low similarity
 	];
 	const matches1 = await findClosestWord(result1, candidates1);
 
 	console.log('Top matches:');
-	matches1.slice(0, 3).forEach((match, i) => {
+	matches1.forEach((match, i) => {
+		const emoji = i === matches1.length - 1 ? '❌' : '✅';
 		console.log(
-			`${i + 1}. ${match.word} (similarity: ${match.similarity.toFixed(
+			`${emoji} ${i + 1}. ${match.word} (similarity: ${match.similarity.toFixed(
 				3
 			)})`
 		);
@@ -145,13 +147,15 @@ async function demonstrateWordArithmetic() {
 		'single',
 		'flirt',
 		'hookup',
+		'accountant', // obviously wrong - should have low similarity
 	];
 	const matches2 = await findClosestWord(result2, candidates2);
 
 	console.log('Top matches:');
-	matches2.slice(0, 3).forEach((match, i) => {
+	matches2.forEach((match, i) => {
+		const emoji = i === matches2.length - 1 ? '❌' : '✅';
 		console.log(
-			`${i + 1}. ${match.word} (similarity: ${match.similarity.toFixed(
+			`${emoji} ${i + 1}. ${match.word} (similarity: ${match.similarity.toFixed(
 				3
 			)})`
 		);
@@ -179,13 +183,15 @@ async function demonstrateWordArithmetic() {
 		'startup',
 		'techbro',
 		'disruptor',
+		'banana', // obviously wrong - should have low similarity
 	];
 	const matches3 = await findClosestWord(result3, candidates3);
 
 	console.log('Top matches:');
-	matches3.slice(0, 3).forEach((match, i) => {
+	matches3.forEach((match, i) => {
+		const emoji = i === matches3.length - 1 ? '❌' : '✅';
 		console.log(
-			`${i + 1}. ${match.word} (similarity: ${match.similarity.toFixed(
+			`${emoji} ${i + 1}. ${match.word} (similarity: ${match.similarity.toFixed(
 				3
 			)})`
 		);
@@ -213,13 +219,15 @@ async function demonstrateWordArithmetic() {
 		'TikTok',
 		'hellscape',
 		'dumpsterfire',
+		'library', // obviously wrong - should have low similarity
 	];
 	const matches4 = await findClosestWord(result4, candidates4);
 
 	console.log('Top matches:');
-	matches4.slice(0, 3).forEach((match, i) => {
+	matches4.forEach((match, i) => {
+		const emoji = i === matches4.length - 1 ? '❌' : '✅';
 		console.log(
-			`${i + 1}. ${match.word} (similarity: ${match.similarity.toFixed(
+			`${emoji} ${i + 1}. ${match.word} (similarity: ${match.similarity.toFixed(
 				3
 			)})`
 		);
@@ -247,13 +255,15 @@ async function demonstrateWordArithmetic() {
 		'veteran',
 		'survivor',
 		'director',
+		'sunshine', // obviously wrong - should have low similarity
 	];
 	const matches5 = await findClosestWord(result5, candidates5);
 
 	console.log('Top matches:');
-	matches5.slice(0, 3).forEach((match, i) => {
+	matches5.forEach((match, i) => {
+		const emoji = i === matches5.length - 1 ? '❌' : '✅';
 		console.log(
-			`${i + 1}. ${match.word} (similarity: ${match.similarity.toFixed(
+			`${emoji} ${i + 1}. ${match.word} (similarity: ${match.similarity.toFixed(
 				3
 			)})`
 		);
@@ -281,13 +291,15 @@ async function demonstrateWordArithmetic() {
 		'performance',
 		'theater',
 		'illusion',
+		'broccoli', // obviously wrong - should have low similarity
 	];
 	const matches6 = await findClosestWord(result6, candidates6);
 
 	console.log('Top matches:');
-	matches6.slice(0, 3).forEach((match, i) => {
+	matches6.forEach((match, i) => {
+		const emoji = i === matches6.length - 1 ? '❌' : '✅';
 		console.log(
-			`${i + 1}. ${match.word} (similarity: ${match.similarity.toFixed(
+			`${emoji} ${i + 1}. ${match.word} (similarity: ${match.similarity.toFixed(
 				3
 			)})`
 		);

@@ -94,8 +94,8 @@ describe('findTopSimilarDocuments', () => {
 			expect(result.similarity).toBeGreaterThanOrEqual(0.7);
 		});
 
-		// Should include perfect match, good match, and moderate match
-		expect(results.length).toBe(3);
+		// Should include perfect match, good match, moderate match, and poor match (0.707 >= 0.7)
+		expect(results.length).toBe(4);
 	});
 
 	it('should limit results to topK parameter', () => {
@@ -134,7 +134,7 @@ describe('findTopSimilarDocuments', () => {
 			0.99,
 			5
 		);
-		expect(results.length).toBe(1); // Only perfect match
+		expect(results.length).toBe(2); // doc1 (1.0) and doc2 (0.994)
 		expect(results[0].document.id).toBe('doc1');
 	});
 

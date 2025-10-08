@@ -7,15 +7,17 @@ Now that you have Pinecone configured, it's time to fill your vector database wi
 ## What You'll Build
 
 By the end of this module, you'll have:
-- An API route that accepts URLs
+- An API route that accepts URLs (`/api/upload-document`)
 - A pipeline that scrapes, chunks, and vectorizes content
 - Documents uploaded to Pinecone and ready for retrieval
+
+**Note**: The UI also supports a `/api/upload-text` route for uploading raw text (already implemented as a reference). This module focuses on the URL route, which is more complex because it requires web scraping.
 
 ---
 
 ## The Big Picture: The Upload Pipeline
 
-Let's understand the complete flow:
+Let's understand the complete flow for the **URL upload route**:
 
 ```
 URLs from User
@@ -27,6 +29,19 @@ URLs from User
 3. Generate embeddings (text → vectors)
     ↓
 4. Upload to Pinecone
+    ↓
+Content Ready for RAG!
+```
+
+**For the text upload route** (already implemented at `/api/upload-text`):
+```
+Raw Text from User
+    ↓
+1. Chunk text into smaller pieces
+    ↓
+2. Generate embeddings (text → vectors)
+    ↓
+3. Upload to Pinecone
     ↓
 Content Ready for RAG!
 ```
@@ -245,14 +260,24 @@ const id = `${chunk.metadata.url}-${chunk.metadata.chunkIndex}`;
 
 ## Testing Your Implementation
 
-### Using the Frontend (after you build it)
-```
-1. Enter URLs in the upload form
-2. Click "Upload"
-3. Check the response for success message
-```
+### Using the Frontend
+The UI (at `http://localhost:3000` after running `yarn dev`) has two upload modes:
+
+**URL Mode:**
+1. Select "URLs" tab
+2. Enter URLs (one per line)
+3. Click "Upload"
+4. Check the response for success message
+
+**Text Mode:**
+1. Select "Raw Text" tab
+2. Paste any text content
+3. Click "Upload"
+4. Check the response for success message
 
 ### Using curl
+
+**Test URL upload:**
 ```bash
 curl -X POST http://localhost:3000/api/upload-document \
   -H "Content-Type: application/json" \
@@ -261,6 +286,15 @@ curl -X POST http://localhost:3000/api/upload-document \
       "https://react.dev/learn",
       "https://nextjs.org/docs"
     ]
+  }'
+```
+
+**Test text upload:**
+```bash
+curl -X POST http://localhost:3000/api/upload-text \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "This is sample text about React hooks. useState and useEffect are commonly used hooks."
   }'
 ```
 
@@ -342,6 +376,18 @@ That's where agents come in...
 - Understanding agent architecture
 - Building an agent routing system
 - Creating specialized agents for different tasks
+
+---
+
+## Bonus: Understanding the Text Upload Route
+
+Want to see a simpler version of the upload pipeline? Check out `/api/upload-text/route.ts` - it's already implemented and shows the same flow without the web scraping complexity:
+
+1. **Direct chunking** - Uses `chunkText()` from `app/libs/chunking.ts`
+2. **Same embedding process** - Calls OpenAI with `text-embedding-3-small`
+3. **Same Pinecone upload** - Uses `index.upsert()`
+
+The main difference: it skips the DataProcessor scraping step since it receives text directly from the user. This is useful when you want to upload documentation, articles, or any text content without needing a URL.
 
 ---
 

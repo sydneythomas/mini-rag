@@ -28,40 +28,30 @@ export async function POST(req: NextRequest) {
 			.map(([key, config]) => `- "${key}": ${config.description}`)
 			.join('\n');
 
-		// Summarize conversation and determine agent
-		const completion = await openaiClient.chat.completions.create({
-			model: 'gpt-4o-mini',
-			messages: [
-				{
-					role: 'system',
-					content: `You are an agent router. Based on the conversation history, determine which agent should handle the request and create a focused query.
+		// TODO: Call OpenAI to determine which agent should handle the request
+		// Hint: Use openaiClient.chat.completions.create()
+		// Model: 'gpt-4o-mini'
+		// System prompt should:
+		//   - Explain you're an agent router
+		//   - List available agents with descriptions
+		//   - Ask for response format: "AGENT: [agent_name]\nQUERY: [refined_query]"
+		// Include recentMessages as context
 
-Available agents:
-${agentDescriptions}
+		// TODO: Parse the text response
+		// The response will be in format:
+		// "AGENT: rag\nQUERY: How to use useState in React"
+		// Extract the agent and query from this text
 
-The query should be a refined, clear version of what the user wants, removing conversational fluff.`,
-				},
-				...recentMessages.map((msg) => ({
-					role: msg.role,
-					content: msg.content,
-				})),
-			],
-			response_format: zodResponseFormat(
-				agentSelectionSchema,
-				'agentSelection'
-			),
-		});
+		// TODO: Validate the agent is valid (exists in agentConfigs)
+		// If not valid, default to 'rag'
 
-		const content = completion.choices[0]?.message?.content;
-		if (!content) {
-			throw new Error('No response from OpenAI');
-		}
+		// TODO: Return the result
+		// Return NextResponse.json({ agent, query })
 
-		const result = agentSelectionSchema.parse(JSON.parse(content));
-
+		// Temporary response for students to replace
 		return NextResponse.json({
-			agent: result.agent,
-			query: result.query,
+			agent: 'rag',
+			query: messages[messages.length - 1]?.content || '',
 		});
 	} catch (error) {
 		console.error('Error selecting agent:', error);

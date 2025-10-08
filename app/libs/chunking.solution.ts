@@ -89,48 +89,27 @@ export function chunkText(
 
 /**
  * Gets the last N characters worth of words from a text
- *
- * This is used to create overlap between chunks. We want complete words,
- * not cut-off characters, so we work backwards from the end.
- *
  * @param text The source text
  * @param maxLength Maximum length to return
  * @returns The last words up to maxLength
- *
- * @example
- * getLastWords("React Hooks are awesome", 10)
- * // Returns: "are awesome" (10 chars)
- * // NOT: "re awesome" (cut off "are")
- *
-
- *
- * Requirements:
- * 1. If text is shorter than maxLength, return the whole text
- * 2. Otherwise, return the last maxLength characters worth of COMPLETE words
- * 3. Build the result backwards to ensure you get the last words
- *
- * Steps:
- * 1. Check if text.length <= maxLength, if so return text
- * 2. Split text into words using .split(' ')
- * 3. Start with empty result string
- * 4. Loop through words BACKWARDS (from end to start)
- * 5. For each word, check if adding it would exceed maxLength
- * 6. If it would exceed, break the loop
- * 7. Otherwise, prepend the word to result (word + ' ' + result)
- * 8. Return the result
  */
 function getLastWords(text: string, maxLength: number): string {
-	// TODO: Implement this function!
-	// YOUR CODE HERE
+	// If text is shorter than maxLength, return it all
 	if (text.length <= maxLength) return text;
 
+	// Split into words
 	const words = text.split(' ');
-
 	let result = '';
 
+	// Loop backwards through words to get the last ones
 	for (let i = words.length - 1; i >= 0; i--) {
 		const word = words[i];
+
+		// Check if adding this word would exceed maxLength
+		// Need to account for space between words (+ 1)
 		if (result.length + word.length + 1 > maxLength) break;
+
+		// Prepend word to result (building backwards)
 		result = word + (result ? ' ' + result : '');
 	}
 

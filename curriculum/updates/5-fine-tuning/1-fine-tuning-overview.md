@@ -1,6 +1,6 @@
 # Fine-Tuning Overview: Teaching AI Your Voice
 
-Before we build the LinkedIn agent, you need to understand fine-tuning - a powerful technique for making AI models sound like YOU.
+Before we build the LinkedIn agent, you need to understand fine-tuning - a powerful technique for making AI models sound like YOU. And also the pitfalls!
 
 ---
 
@@ -14,16 +14,18 @@ Take a trained AI model and teach it your specific patterns, style, and knowledg
 Imagine hiring a new employee:
 
 **Base Model = New College Graduate**
-- Has general education
-- Knows basic principles
-- Generic communication style
-- Needs to learn your company's way
+
+-   Has general education
+-   Knows basic principles
+-   Generic communication style
+-   Needs to learn your company's way
 
 **Fine-Tuned Model = Experienced Team Member**
-- Still has general education
-- PLUS learned your processes
-- PLUS mimics your company culture
-- PLUS understands your terminology
+
+-   Still has general education
+-   PLUS learned your processes
+-   PLUS mimics your company culture
+-   PLUS understands your terminology
 
 Fine-tuning is that training period, but for AI.
 
@@ -80,49 +82,57 @@ This is a critical decision point!
 ### Use Fine-Tuning When:
 
 ✅ **Consistent Style Required**
-- "Write marketing copy in our brand voice"
-- "Respond to customer support like our team does"
-- "Generate code following our patterns"
+
+-   "Write marketing copy in our brand voice"
+-   "Respond to customer support like our team does"
+-   "Generate code following our patterns"
 
 ✅ **Repeated Tasks**
-- Classification (spam vs. not spam)
-- Formatting (structured output)
-- Translation (with specific terminology)
+
+-   Classification (spam vs. not spam)
+-   Formatting (structured output)
+-   Translation (with specific terminology)
 
 ✅ **You Have Training Data**
-- Need 100+ quality examples minimum
-- More is better (500+ is ideal)
+
+-   Need 100+ quality examples minimum
+-   More is better (500+ is ideal)
 
 ### Use RAG When:
 
 ✅ **Latest Information Needed**
-- Documentation that changes
-- Current events
-- Frequently updated content
+
+-   Documentation that changes
+-   Current events
+-   Frequently updated content
 
 ✅ **Large Knowledge Base**
-- Thousands of documents
-- Can't fit in training data
-- Dynamic content
+
+-   Thousands of documents
+-   Can't fit in training data
+-   Dynamic content
 
 ✅ **Factual Accuracy Critical**
-- Can verify sources
-- Can trace answers back to documents
-- Can update without retraining
+
+-   Can verify sources
+-   Can trace answers back to documents
+-   Can update without retraining
 
 ### Why We Use Both
 
 **LinkedIn Agent (Fine-Tuned):**
-- YOUR professional voice
-- YOUR communication style
-- Consistent tone across responses
-- Trained on your LinkedIn content
+
+-   YOUR professional voice
+-   YOUR communication style
+-   Consistent tone across responses
+-   Trained on your LinkedIn content
 
 **RAG Agent (Base Model + Retrieval):**
-- Up-to-date documentation
-- Latest technical content
-- Factual, sourced answers
-- Easy to update (just add docs)
+
+-   Up-to-date documentation
+-   Latest technical content
+-   Factual, sourced answers
+-   Easy to update (just add docs)
 
 ---
 
@@ -131,13 +141,15 @@ This is a critical decision point!
 ### Fine-Tuning Costs
 
 **Training:** One-time cost based on data size
-- ~$8 per 1M tokens for gpt-4o-mini
-- Your 100 examples ≈ $0.10-1.00
+
+-   ~$8 per 1M tokens for gpt-4o-mini
+-   Your 100 examples ≈ $0.10-1.00
 
 **Usage:** Slightly more expensive than base
-- Base: $0.150 per 1M input tokens
-- Fine-tuned: $0.300 per 1M input tokens
-- But worth it for quality!
+
+-   Base: $0.150 per 1M input tokens
+-   Fine-tuned: $0.300 per 1M input tokens
+-   But worth it for quality!
 
 ### When It's Worth It
 
@@ -165,15 +177,17 @@ Fine-tuning uses JSONL (JSON Lines) format - one JSON object per line:
 ```
 
 **Each line contains:**
-- **system**: Instructions/context (consistent across examples)
-- **user**: The question/input
-- **assistant**: YOUR response (this is what the model learns)
+
+-   **system**: Instructions/context (consistent across examples)
+-   **user**: The question/input
+-   **assistant**: YOUR response (this is what the model learns)
 
 **Key Points:**
-- Same system message across examples (establishes role)
-- User messages should cover variety of questions
-- Assistant responses should be YOUR actual style
-- More examples = better results
+
+-   Same system message across examples (establishes role)
+-   User messages should cover variety of questions
+-   Assistant responses should be YOUR actual style
+-   More examples = better results
 
 ---
 
@@ -182,6 +196,7 @@ Fine-tuning uses JSONL (JSON Lines) format - one JSON object per line:
 ### ✅ Good Training Data
 
 **Diverse Questions:**
+
 ```jsonl
 {"messages": [..., "user": "How do I network?"]}
 {"messages": [..., "user": "Profile tips?"]}
@@ -190,6 +205,7 @@ Fine-tuning uses JSONL (JSON Lines) format - one JSON object per line:
 ```
 
 **Consistent Voice:**
+
 ```
 All assistant responses sound like the same person
 Similar tone, style, vocabulary
@@ -197,13 +213,15 @@ Consistent formatting preferences
 ```
 
 **Quality Over Quantity:**
-- 100 great examples > 1000 mediocre ones
-- Each example teaches the model YOUR way
-- Clean, well-written responses
+
+-   100 great examples > 1000 mediocre ones
+-   Each example teaches the model YOUR way
+-   Clean, well-written responses
 
 ### ❌ Bad Training Data
 
 **Inconsistent:**
+
 ```
 Some responses are formal, some casual
 Different people wrote the responses
@@ -211,14 +229,17 @@ Varying quality levels
 ```
 
 **Too Similar:**
+
 ```jsonl
 {"messages": [..., "user": "How to network?"]}
 {"messages": [..., "user": "How do I network?"]}
 {"messages": [..., "user": "Ways to network?"]}
 ```
+
 Same question, slightly reworded (no variety)
 
 **Low Quality:**
+
 ```
 Typos and grammar errors
 Incomplete responses
@@ -230,6 +251,7 @@ Generic/unhelpful answers
 ## The Fine-Tuning Process
 
 **Overview:**
+
 1. Prepare training data (JSONL file)
 2. Upload to OpenAI
 3. Start fine-tuning job
@@ -238,6 +260,7 @@ Generic/unhelpful answers
 6. Use in your application
 
 **What Happens During Training:**
+
 ```
 OpenAI takes your base model
 Processes each training example
@@ -247,9 +270,10 @@ Gives you a model ID: ft:gpt-4o-mini-2024-07-18:org:name:abc123
 ```
 
 **Time Required:**
-- Small dataset (100 examples): 10-20 minutes
-- Medium dataset (1000 examples): 1-2 hours
-- Large dataset (10,000 examples): Several hours
+
+-   Small dataset (100 examples): 10-20 minutes
+-   Medium dataset (1000 examples): 1-2 hours
+-   Large dataset (10,000 examples): Several hours
 
 You only do this once (or when you want to update with new data).
 
@@ -258,6 +282,7 @@ You only do this once (or when you want to update with new data).
 ## What You'll Do Next
 
 In the next section, you'll:
+
 1. Look at the training data format
 2. Run the fine-tuning script
 3. Monitor the training job

@@ -7,37 +7,41 @@ You've built the foundation - now let's make your RAG system intelligent. Agents
 ## What You'll Build
 
 By the end of this module, you'll understand:
-- What agents are and why we need them
-- How to route requests to the right agent
-- The agent architecture pattern
-- How to build an agent selector
+
+-   What agents are and why we need them
+-   How to route requests to the right agent
+-   The agent architecture pattern
+-   How to build an agent selector
 
 ---
 
 ## The Problem: One Model Can't Do Everything Well
 
 Imagine you have a chatbot that needs to:
-- Answer questions about your LinkedIn content (needs your writing style)
-- Answer questions about React documentation (needs up-to-date info)
-- Handle casual conversation (needs general knowledge)
+
+-   Answer questions about your LinkedIn content (needs your writing style)
+-   Answer questions about React documentation (needs up-to-date info)
+-   Handle casual conversation (needs general knowledge)
 
 **One approach: Use one model for everything**
+
 ```typescript
 // ❌ The naive approach
 const response = await openai.chat.completions.create({
-  model: 'gpt-4o',
-  messages: [
-    { role: 'system', content: 'Answer any question' },
-    { role: 'user', content: userMessage }
-  ]
+	model: 'gpt-4o',
+	messages: [
+		{ role: 'system', content: 'Answer any question' },
+		{ role: 'user', content: userMessage },
+	],
 });
 ```
 
 **Problems:**
-- Can't fine-tune for specific tasks
-- No specialized knowledge retrieval
-- Same prompt for all scenarios
-- Expensive (always uses big model)
+
+-   Can't fine-tune for specific tasks
+-   No specialized knowledge retrieval
+-   Same prompt for all scenarios
+-   Expensive (always uses big model)
 
 ---
 
@@ -61,10 +65,11 @@ Specialized Response
 ```
 
 **Benefits:**
-- Right tool for the job
-- Better quality answers
-- More cost effective
-- Easy to add new capabilities
+
+-   Right tool for the job
+-   Better quality answers
+-   More cost effective
+-   Easy to add new capabilities
 
 ---
 
@@ -73,15 +78,17 @@ Specialized Response
 Think of a hospital:
 
 **Bad approach: One doctor**
-- One generalist doctor sees every patient
-- Slower, less specialized care
-- Can't be expert in everything
+
+-   One generalist doctor sees every patient
+-   Slower, less specialized care
+-   Can't be expert in everything
 
 **Good approach: Specialists**
-- Triage nurse routes patients
-- Cardiologist handles heart issues
-- Orthopedist handles broken bones
-- Each is an expert in their domain
+
+-   Triage nurse routes patients
+-   Cardiologist handles heart issues
+-   Orthopedist handles broken bones
+-   Each is an expert in their domain
 
 Your AI system works the same way!
 
@@ -95,10 +102,10 @@ Your AI system works the same way!
 export type AgentType = 'linkedin' | 'rag';
 
 export interface AgentRequest {
-  type: AgentType;           // Which agent is handling this
-  query: string;             // Refined/summarized query
-  originalQuery: string;     // What user actually said
-  messages: Message[];       // Full conversation history
+	type: AgentType; // Which agent is handling this
+	query: string; // Refined/summarized query
+	originalQuery: string; // What user actually said
+	messages: Message[]; // Full conversation history
 }
 
 export type AgentResponse = StreamTextResult; // Streamed response
@@ -107,31 +114,33 @@ export type AgentResponse = StreamTextResult; // Streamed response
 **Key insight: The AgentRequest interface**
 
 This is your contract. Every agent receives the same structure but handles it differently:
-- `type`: So the agent knows what it's supposed to do
-- `query`: Refined query (selector removed fluff)
-- `originalQuery`: Maintains user's exact words
-- `messages`: For context-aware responses
+
+-   `type`: So the agent knows what it's supposed to do
+-   `query`: Refined query (selector removed fluff)
+-   `originalQuery`: Maintains user's exact words
+-   `messages`: For context-aware responses
 
 ### 2. Agent Config (`app/agents/config.ts`)
 
 ```typescript
 export const agentConfigs: Record<AgentType, AgentConfig> = {
-  linkedin: {
-    name: 'LinkedIn Agent',
-    description: 'For questions about LinkedIn, professional networking...'
-  },
-  rag: {
-    name: 'RAG Agent',
-    description: 'For questions about documentation, technical content...'
-  }
+	linkedin: {
+		name: 'LinkedIn Agent',
+		description: 'For questions about LinkedIn, professional networking...',
+	},
+	rag: {
+		name: 'RAG Agent',
+		description: 'For questions about documentation, technical content...',
+	},
 };
 ```
 
 **Why separate config?**
-- Single source of truth
-- Selector uses descriptions to route
-- Easy to add new agents (just add to config)
-- Documentation stays in sync with code
+
+-   Single source of truth
+-   Selector uses descriptions to route
+-   Easy to add new agents (just add to config)
+-   Documentation stays in sync with code
 
 ### 3. Agent Registry (`app/agents/registry.ts`)
 
@@ -139,14 +148,15 @@ export const agentConfigs: Record<AgentType, AgentConfig> = {
 type AgentExecutor = (request: AgentRequest) => Promise<AgentResponse>;
 
 export const agentRegistry: Record<AgentType, AgentExecutor> = {
-  linkedin: linkedInAgent,
-  rag: ragAgent,
+	linkedin: linkedInAgent,
+	rag: ragAgent,
 };
 ```
 
 **The Registry Pattern**
 
 This is a common software pattern:
+
 1. Map string keys to functions
 2. Type-safe lookup
 3. Runtime routing
@@ -167,6 +177,7 @@ This is the "triage nurse" of your system.
 **Input:** Conversation history (last 5 messages)
 
 **Process:**
+
 1. Analyzes the conversation context
 2. Determines user intent
 3. Refines the query (removes conversational fluff)
@@ -181,12 +192,14 @@ const recentMessages = messages.slice(-5);
 ```
 
 **Reasoning:**
-- Maintains conversation context
-- Understands follow-up questions
-- Not too much context (cost + latency)
-- Captures recent intent shift
+
+-   Maintains conversation context
+-   Understands follow-up questions
+-   Not too much context (cost + latency)
+-   Captures recent intent shift
 
 Example:
+
 ```
 User: "Tell me about yourself"
 Bot: "I'm a RAG assistant..."
@@ -210,10 +223,11 @@ Respond with: { "agent": "rag", "query": "clear focused query" }`;
 ```
 
 **Why this works:**
-- Clear instructions
-- Explicit agent descriptions
-- Structured output (JSON)
-- Query refinement built-in
+
+-   Clear instructions
+-   Explicit agent descriptions
+-   Structured output (JSON)
+-   Query refinement built-in
 
 ---
 
@@ -224,10 +238,11 @@ Respond with: { "agent": "rag", "query": "clear focused query" }`;
 **Selector refines to:** "What is React state management?"
 
 **Benefits:**
-- Better embedding matching (if using RAG)
-- Clearer intent for the agent
-- Removes noise ("yo", "like", "you mentioned")
-- More precise retrieval
+
+-   Better embedding matching (if using RAG)
+-   Clearer intent for the agent
+-   Removes noise ("yo", "like", "you mentioned")
+-   More precise retrieval
 
 ---
 
@@ -236,6 +251,7 @@ Respond with: { "agent": "rag", "query": "clear focused query" }`;
 Located at: `app/api/chat/route.ts`
 
 This route receives:
+
 ```typescript
 {
   messages: [...conversation],
@@ -245,6 +261,7 @@ This route receives:
 ```
 
 Then:
+
 1. Gets the agent executor from registry
 2. Builds the AgentRequest
 3. Executes the agent
@@ -271,10 +288,11 @@ Then:
 ```
 
 Each layer has ONE job. Easy to:
-- Test individually
-- Modify without breaking others
-- Add new agents
-- Debug issues
+
+-   Test individually
+-   Modify without breaking others
+-   Add new agents
+-   Debug issues
 
 ### Type Safety
 
@@ -306,9 +324,10 @@ Done! The selector automatically knows about it because it reads from the config
 ### 1. Always Include Both Queries
 
 Agents should receive BOTH the original and refined queries:
-- **Original**: Captures user's tone/style/exact words
-- **Refined**: Captures the core intent
-- **Together**: Gives complete context
+
+-   **Original**: Captures user's tone/style/exact words
+-   **Refined**: Captures the core intent
+-   **Together**: Gives complete context
 
 ### 2. Error Handling
 
@@ -317,21 +336,19 @@ Agents should receive BOTH the original and refined queries:
 ### 3. Streaming Responses
 
 All agents return streams, not complete responses:
-- Better UX (user sees response immediately)
-- Lower perceived latency
-- Can cancel long responses
-- Industry standard for chat apps
+
+-   Better UX (user sees response immediately)
+-   Lower perceived latency
+-   Can cancel long responses
+-   Industry standard for chat apps
 
 ---
 
-## What's Next?
-
-Now you understand the architecture. Time to implement the agents themselves!
-
 **Coming up:**
-- Building the LinkedIn agent with a fine-tuned model
-- Building the RAG agent with retrieval
-- Connecting everything to the UI
+
+-   Building the LinkedIn agent with a fine-tuned model
+-   Building the RAG agent with retrieval
+-   Connecting everything to the UI
 
 ---
 
