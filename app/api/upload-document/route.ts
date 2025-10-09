@@ -58,7 +58,8 @@ export async function POST(req: NextRequest) {
 			// Map each chunk to a vector object with:
 			// - id: chunk.id
 			// - values: the embedding array from embeddingResponse.data[idx].embedding
-			// - metadata: chunk.metadata
+			// - metadata: { text: chunk.content, ...chunk.metadata }
+			// IMPORTANT: Include text: chunk.content so the actual text is searchable!
 
 			// TODO: Step 8 - Upload to Pinecone
 			// Use index.upsert() to upload the vectors array
