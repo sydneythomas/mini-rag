@@ -5,50 +5,50 @@ import { openai } from '@ai-sdk/openai';
 import { streamText } from 'ai';
 
 export async function ragAgent(request: AgentRequest): Promise<AgentResponse> {
-	const embeddingResponse = await openaiClient.embeddings.create({
-		model: 'text-embedding-3-small',
-		dimensions: 512,
-		input: request.query,
-	});
+	// TODO: Step 1 - Generate embedding for the refined query
+	// Use openaiClient.embeddings.create()
+	// Model: 'text-embedding-3-small'
+	// Dimensions: 512
+	// Input: request.query
+	// Extract the embedding from response.data[0].embedding
 
-	const embedding = embeddingResponse.data[0].embedding;
+	// TODO: Step 2 - Query Pinecone for similar documents
+	// Get the index: pineconeClient.Index(process.env.PINECONE_INDEX!)
+	// Query parameters:
+	//   - vector: the embedding from step 1
+	//   - topK: 10 (to over-fetch for reranking)
+	//   - includeMetadata: true
 
-	const index = pineconeClient.Index(process.env.PINECONE_INDEX!);
+	// TODO: Step 3 - Extract text from results
+	// Map over queryResponse.matches
+	// Get metadata?.text (or metadata?.content as fallback)
+	// Filter out any null/undefined values
 
-	const queryResponse = await index.query({
-		vector: embedding,
-		topK: 10,
-		includeMetadata: true,
-	});
+	// TODO: Step 4 - Rerank with Pinecone inference API
+	// Use pineconeClient.inference.rerank()
+	// Model: 'bge-reranker-v2-m3'
+	// Pass the query and documents array
+	// This gives you better quality results
 
-	const documents = queryResponse.matches
-		.map((match) => match.metadata?.text ?? match.metadata?.content)
-		.filter(Boolean);
+	// TODO: Step 5 - Build context from reranked results
+	// Map over reranked.data
+	// Extract result.document?.text from each
+	// Join with '\n\n' separator
 
-	const reranked = await pineconeClient.inference.rerank(
-		'bge-reranker-v2-m3',
-		request.query,
-		documents as string[]
-	);
+	// TODO: Step 6 - Create system prompt
+	// Include:
+	//   - Instructions to answer based on context
+	//   - Original query (request.originalQuery)
+	//   - Refined query (request.query)
+	//   - The retrieved context
+	//   - Instruction to say if context is insufficient
 
-	const retrievedContext = reranked.data
-		.map((result) => result.document?.text)
-		.filter(Boolean)
-		.join('\n\n');
+	// TODO: Step 7 - Stream the response
+	// Use streamText()
+	// Model: openai('gpt-4o')
+	// System: your system prompt
+	// Messages: request.messages
+	// Return the stream
 
-	const systemPrompt = `You are a helpful assistant that answers questions based on the provided context.
-
-Original user request: "${request.originalQuery}"
-Refined query: "${request.query}"
-
-Context from documentation:
-${retrievedContext}
-
-Use the context above to answer the user's question. If the context doesn't contain enough information, say so clearly.`;
-
-	return streamText({
-		model: openai('gpt-4o'),
-		system: systemPrompt,
-		messages: request.messages,
-	});
+	throw new Error('RAG agent not implemented yet!');
 }

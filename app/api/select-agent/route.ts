@@ -28,41 +28,24 @@ export async function POST(req: NextRequest) {
 			.map(([key, config]) => `- "${key}": ${config.description}`)
 			.join('\n');
 
-		const parsedResponse = await openaiClient.responses.parse({
-			model: 'gpt-4o-mini',
-			input: [
-				{
-					role: 'system',
-					content: `You are an agent router. Based on the conversation history, determine which agent should handle the request and refine the query if needed.
+		// TODO: Step 1 - Call OpenAI with structured output
+		// Use openaiClient.responses.parse()
+		// Model: 'gpt-4o-mini'
+		// Input: array of messages with:
+		//   - System message explaining you're an agent router
+		//   - Include agentDescriptions in the system message
+		//   - ...recentMessages (spread the user's messages)
+		// Text format: use zodTextFormat(agentSelectionSchema, 'agentSelection')
 
-Available agents:
-${agentDescriptions}
+		// TODO: Step 2 - Extract the parsed output
+		// The response has an output_parsed field
+		// This will contain { agent, query }
 
-Select the most appropriate agent and optionally refine the user's query to be more specific and actionable.`,
-				},
-				...recentMessages.map((msg) => ({
-					role: msg.role,
-					content: msg.content,
-				})),
-			],
-			text: {
-				format: zodTextFormat(agentSelectionSchema, 'agentSelection'),
-			},
-		});
+		// TODO: Step 3 - Return the result
+		// If output has both agent and query, return them
+		// Otherwise, return a fallback: { agent: 'rag', query: last message content }
 
-		const output = parsedResponse.output_parsed;
-
-		if (output?.agent && output?.query) {
-			return NextResponse.json({
-				agent: output.agent,
-				query: output.query,
-			});
-		}
-
-		return NextResponse.json({
-			agent: 'rag',
-			query: messages[messages.length - 1]?.content || '',
-		});
+		throw new Error('Selector not implemented yet!');
 	} catch (error) {
 		console.error('Error selecting agent:', error);
 		return NextResponse.json(
