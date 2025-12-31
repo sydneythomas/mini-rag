@@ -122,4 +122,7 @@ export function chunkText(
 function getLastWords(text: string, maxLength: number): string {
 	// TODO: Implement this function!
 	// YOUR CODE HERE
+
+	// Placeholder return - replace with your implementation
+	throw new Error('getLastWords not implemented yet!');
 }

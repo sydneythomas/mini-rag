@@ -16,7 +16,6 @@ export default function Home() {
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 
 	const [uploadContent, setUploadContent] = useState('');
-	const [uploadType, setUploadType] = useState<'urls' | 'text'>('urls');
 	const [isUploading, setIsUploading] = useState(false);
 	const [uploadStatus, setUploadStatus] = useState('');
 
@@ -27,50 +26,24 @@ export default function Home() {
 		setUploadStatus('');
 
 		try {
-			if (uploadType === 'urls') {
-				// Upload URLs
-				const urls = uploadContent
-					.split('\n')
-					.map((url) => url.trim())
-					.filter(Boolean);
+			const response = await fetch('/api/upload-document', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ text: uploadContent }),
+			});
 
-				const response = await fetch('/api/upload-document', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ urls }),
-				});
+			const data = await response.json();
 
-				const data = await response.json();
-
-				if (response.ok) {
-					setUploadStatus(
-						`✅ Success! Uploaded ${data.vectorsUploaded} vectors`
-					);
-					setUploadContent('');
-				} else {
-					setUploadStatus(`❌ Error: ${data.error}`);
-				}
+			if (response.ok) {
+				setUploadStatus(
+					`Success! Uploaded ${data.vectorsUploaded} vectors from ${data.chunksCreated} chunks`
+				);
+				setUploadContent('');
 			} else {
-				// Upload raw text
-				const response = await fetch('/api/upload-text', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ text: uploadContent }),
-				});
-
-				const data = await response.json();
-
-				if (response.ok) {
-					setUploadStatus(
-						`✅ Success! Uploaded ${data.vectorsUploaded} vectors from text`
-					);
-					setUploadContent('');
-				} else {
-					setUploadStatus(`❌ Error: ${data.error}`);
-				}
+				setUploadStatus(`Error: ${data.error}`);
 			}
 		} catch {
-			setUploadStatus('❌ Failed to upload content');
+			setUploadStatus('Failed to upload content');
 		} finally {
 			setIsUploading(false);
 		}
@@ -181,48 +154,26 @@ export default function Home() {
 			{/* Upload Section */}
 			<div className='mb-8 p-4 border rounded'>
 				<h2 className='text-xl font-semibold mb-4'>Upload Content</h2>
-
-				{/* Toggle between URLs and Text */}
-				<div className='flex gap-2 mb-4'>
-					<button
-						onClick={() => setUploadType('urls')}
-						className={`px-4 py-2 rounded ${
-							uploadType === 'urls'
-								? 'bg-blue-600 '
-								: 'bg-gray-200 text-gray-700'
-						}`}
-					>
-						URLs
-					</button>
-					<button
-						onClick={() => setUploadType('text')}
-						className={`px-4 py-2 rounded ${
-							uploadType === 'text'
-								? 'bg-blue-600 '
-								: 'bg-gray-200 text-gray-700'
-						}`}
-					>
-						Raw Text
-					</button>
-				</div>
+				<p className='text-sm text-gray-600 mb-4'>
+					Paste text content below to add it to your knowledge base. The text
+					will be chunked, embedded, and stored in Pinecone for retrieval.
+				</p>
 
 				<textarea
 					value={uploadContent}
 					onChange={(e) => setUploadContent(e.target.value)}
-					placeholder={
-						uploadType === 'urls'
-							? 'Enter URLs (one per line)\nExample:\nhttps://react.dev/learn\nhttps://react.dev/reference/react/useState'
-							: 'Paste your text content here...\n\nThis can be documentation, articles, or any text you want to query.'
-					}
+					placeholder='Paste your text content here...
+
+This can be documentation, articles, or any text you want to query later.'
 					className='w-full p-2 border rounded mb-2 h-32'
 					disabled={isUploading}
 				/>
 				<button
 					onClick={handleUpload}
 					disabled={isUploading || !uploadContent.trim()}
-					className='px-4 py-2 bg-blue-600 text-black rounded disabled:bg-gray-400'
+					className='px-4 py-2 bg-blue-600 text-white rounded disabled:bg-gray-400'
 				>
-					{isUploading ? 'Uploading...' : 'Upload'}
+					{isUploading ? 'Uploading...' : 'Upload Text'}
 				</button>
 				{uploadStatus && <p className='mt-2 text-sm'>{uploadStatus}</p>}
 			</div>
@@ -236,10 +187,9 @@ export default function Home() {
 				<div className='h-96 overflow-y-auto mb-4 space-y-4'>
 					{messages.length === 0 && (
 						<div className='text-gray-500 text-center py-8'>
-							<p className='mb-2'>👋 Welcome to Mini RAG!</p>
+							<p className='mb-2'>Welcome to Mini RAG!</p>
 							<p className='text-sm'>
-								Upload some documents above, then ask questions
-								about them.
+								Upload some text above, then ask questions about it.
 							</p>
 						</div>
 					)}
@@ -253,18 +203,14 @@ export default function Home() {
 							}`}
 						>
 							<p className='font-semibold mb-1'>
-								{message.role === 'user'
-									? '👤 You'
-									: '🤖 AI Assistant'}
+								{message.role === 'user' ? 'You' : 'AI Assistant'}
 							</p>
-							<div className='whitespace-pre-wrap'>
-								{message.content}
-							</div>
+							<div className='whitespace-pre-wrap'>{message.content}</div>
 						</div>
 					))}
 					{isStreaming && !messages[messages.length - 1]?.content && (
 						<div className='p-3 rounded bg-gray-100 mr-8'>
-							<p className='text-gray-500'>🤔 Thinking...</p>
+							<p className='text-gray-500'>Thinking...</p>
 						</div>
 					)}
 					<div ref={messagesEndRef} />
@@ -281,7 +227,7 @@ export default function Home() {
 					<button
 						type='submit'
 						disabled={isStreaming || !input.trim()}
-						className='px-6 py-2 bg-green-600 text-black rounded disabled:bg-gray-400'
+						className='px-6 py-2 bg-green-600 text-white rounded disabled:bg-gray-400'
 					>
 						{isStreaming ? 'Sending...' : 'Send'}
 					</button>
