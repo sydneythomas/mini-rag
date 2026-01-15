@@ -257,3 +257,232 @@ describe('chunkText', () => {
 		});
 	});
 });
+
+/*
+ * TODO: Uncomment these tests once you implement the extraction functions!
+ *
+ * These tests verify that your extractLinkedInPosts and extractMediumArticle
+ * functions work correctly with real data.
+ */
+
+import fs from 'fs';
+import path from 'path';
+import {
+	extractLinkedInPosts,
+	extractMediumArticle,
+	type MediumArticle,
+} from './chunking';
+
+describe('LinkedIn Post Extraction', () => {
+	let csvContent: string;
+
+	beforeAll(() => {
+		const csvPath = path.join(
+			process.cwd(),
+			'app/scripts/data/brian_posts.csv'
+		);
+		csvContent = fs.readFileSync(csvPath, 'utf-8');
+	});
+
+	test('should extract posts from CSV', () => {
+		const posts = extractLinkedInPosts(csvContent);
+		expect(posts).toBeDefined();
+		expect(Array.isArray(posts)).toBe(true);
+		expect(posts.length).toBeGreaterThan(0);
+	});
+
+	test('should have correct post structure', () => {
+		const posts = extractLinkedInPosts(csvContent);
+		const post = posts.find((p) => p.text.length > 100);
+
+		expect(post).toBeDefined();
+		expect(post?.text).toBeDefined();
+		expect(post?.date).toBeDefined();
+		expect(post?.url).toBeDefined();
+		expect(typeof post?.likes).toBe('number');
+	});
+
+	test('should filter out posts shorter than 100 characters', () => {
+		const posts = extractLinkedInPosts(csvContent);
+		const longPosts = posts.filter((p) => p.text.length >= 100);
+		expect(longPosts.length).toBeGreaterThan(0);
+	});
+});
+
+describe('Medium Article Extraction', () => {
+	let htmlFiles: string[];
+	let articlesDir: string;
+
+	beforeAll(() => {
+		articlesDir = path.join(process.cwd(), 'app/scripts/data/articles');
+		const files = fs.readdirSync(articlesDir);
+		htmlFiles = files.filter((f) => f.endsWith('.html'));
+	});
+
+	test('should extract article from HTML', () => {
+		const filePath = path.join(articlesDir, htmlFiles[0]);
+		const htmlContent = fs.readFileSync(filePath, 'utf-8');
+		const article = extractMediumArticle(htmlContent);
+
+		expect(article).toBeDefined();
+		expect(article?.title).toBeDefined();
+		expect(article?.text).toBeDefined();
+		expect(article?.date).toBeDefined();
+		expect(article?.url).toBeDefined();
+	});
+
+	test('should have correct article structure', () => {
+		// Find a longer article
+		let article: MediumArticle | null = null;
+		for (const file of htmlFiles) {
+			const filePath = path.join(articlesDir, file);
+			const htmlContent = fs.readFileSync(filePath, 'utf-8');
+			const extracted = extractMediumArticle(htmlContent);
+			if (extracted && extracted.text.length >= 500) {
+				article = extracted;
+				break;
+			}
+		}
+
+		expect(article).toBeDefined();
+		expect(article?.title.length).toBeGreaterThan(0);
+		expect(article?.text.length).toBeGreaterThan(0);
+		expect(article?.url).toContain('medium.com');
+	});
+});
+
+describe('Chunking with Metadata', () => {
+	test('should create chunks from LinkedIn post with metadata', () => {
+		const csvPath = path.join(
+			process.cwd(),
+			'app/scripts/data/brian_posts.csv'
+		);
+		const csvContent = fs.readFileSync(csvPath, 'utf-8');
+		const posts = extractLinkedInPosts(csvContent);
+
+		// Find a post longer than 100 chars
+		const post = posts.find((p) => p.text.length >= 100);
+		expect(post).toBeDefined();
+
+		if (!post) return;
+
+		const chunks = chunkText(post.text, 500, 50, post.url);
+
+		// Add LinkedIn-specific metadata
+		chunks.forEach((chunk) => {
+			chunk.metadata.date = post.date;
+			chunk.metadata.likes = post.likes;
+			chunk.metadata.url = post.url;
+			chunk.metadata.type = 'linkedin_post';
+		});
+
+		expect(chunks.length).toBeGreaterThan(0);
+		expect(chunks[0].metadata.date).toBe(post.date);
+		expect(chunks[0].metadata.likes).toBe(post.likes);
+		expect(chunks[0].metadata.url).toBe(post.url);
+		expect(chunks[0].metadata.type).toBe('linkedin_post');
+	});
+
+	test('should create chunks from Medium article with metadata', () => {
+		const articlesDir = path.join(
+			process.cwd(),
+			'app/scripts/data/articles'
+		);
+		const files = fs.readdirSync(articlesDir);
+		const htmlFiles = files.filter((f) => f.endsWith('.html'));
+
+		// Find an article longer than 500 chars
+		let article: MediumArticle | null = null;
+		for (const file of htmlFiles) {
+			const filePath = path.join(articlesDir, file);
+			const htmlContent = fs.readFileSync(filePath, 'utf-8');
+			const extracted = extractMediumArticle(htmlContent);
+			if (extracted && extracted.text.length >= 500) {
+				article = extracted;
+				break;
+			}
+		}
+
+		expect(article).toBeDefined();
+		if (!article) return;
+
+		const chunks = chunkText(article.text, 500, 50, article.url);
+
+		// Add Medium-specific metadata
+		chunks.forEach((chunk) => {
+			chunk.metadata.title = article.title;
+			chunk.metadata.date = article.date;
+			chunk.metadata.url = article.url;
+			chunk.metadata.type = 'medium_article';
+		});
+
+		expect(chunks.length).toBeGreaterThan(0);
+		expect(chunks[0].metadata.title).toBe(article.title);
+		expect(chunks[0].metadata.date).toBe(article.date);
+		expect(chunks[0].metadata.url).toBe(article.url);
+		expect(chunks[0].metadata.type).toBe('medium_article');
+	});
+
+	test('should have valid chunk structure', () => {
+		const text =
+			'This is a test sentence. This is another sentence. And one more for good measure.';
+		const chunks = chunkText(text, 50, 10, 'test-source');
+
+		expect(chunks.length).toBeGreaterThan(0);
+
+		chunks.forEach((chunk) => {
+			expect(chunk.id).toBeDefined();
+			expect(chunk.content).toBeDefined();
+			expect(chunk.metadata).toBeDefined();
+			expect(chunk.metadata.source).toBe('test-source');
+			expect(chunk.metadata.chunkIndex).toBeGreaterThanOrEqual(0);
+			expect(chunk.metadata.totalChunks).toBe(chunks.length);
+			expect(chunk.metadata.startChar).toBeGreaterThanOrEqual(0);
+			expect(chunk.metadata.endChar).toBeGreaterThan(
+				chunk.metadata.startChar
+			);
+		});
+	});
+});
+
+describe('Content Filtering', () => {
+	test('should identify short and long LinkedIn posts', () => {
+		const csvPath = path.join(
+			process.cwd(),
+			'app/scripts/data/brian_posts.csv'
+		);
+		const csvContent = fs.readFileSync(csvPath, 'utf-8');
+		const posts = extractLinkedInPosts(csvContent);
+
+		const shortPosts = posts.filter((p) => p.text.length < 100);
+		const longPosts = posts.filter((p) => p.text.length >= 100);
+
+		// We should have both short and long posts
+		expect(shortPosts.length).toBeGreaterThan(0);
+		expect(longPosts.length).toBeGreaterThan(0);
+	});
+
+	test('should identify short and long Medium articles', () => {
+		const articlesDir = path.join(
+			process.cwd(),
+			'app/scripts/data/articles'
+		);
+		const files = fs.readdirSync(articlesDir);
+		const htmlFiles = files.filter((f) => f.endsWith('.html')).slice(0, 10);
+
+		let longArticles = 0;
+
+		htmlFiles.forEach((file) => {
+			const filePath = path.join(articlesDir, file);
+			const htmlContent = fs.readFileSync(filePath, 'utf-8');
+			const article = extractMediumArticle(htmlContent);
+
+			if (article && article.text.length >= 500) {
+				longArticles++;
+			}
+		});
+
+		// We should have at least some long articles
+		expect(longArticles).toBeGreaterThan(0);
+	});
+});
