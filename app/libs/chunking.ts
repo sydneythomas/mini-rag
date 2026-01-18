@@ -20,7 +20,13 @@ export type LinkedInPost = {
 // TODO: Define MediumArticle type
 // Should have: title (string), text (string), date (string), url (string)
 export type MediumArticle = {
-	// YOUR CODE HERE
+	title: string;
+	text: string;
+	date: string;
+	url: string;
+	author: string;
+	source: string;
+	language: string;
 };
 
 /**
@@ -132,11 +138,37 @@ export function chunkText(
  * 8. Return the result
  */
 function getLastWords(text: string, maxLength: number): string {
-	// TODO: Implement this function!
-	// YOUR CODE HERE
+	// Step 1: Check if text.length <= maxLength, if so return text
+	if (text.length <= maxLength) {
+		return text;
+	}
 
-	// Placeholder return - replace with your implementation
-	throw new Error('getLastWords not implemented yet!');
+	// Step 2: Split text into words using .split(' ')
+	const words = text.split(' ');
+
+	// Step 3: Start with empty result string
+	let result = '';
+
+	// Step 4: Loop through words BACKWARDS (from end to start)
+	for (let i = words.length - 1; i >= 0; i--) {
+		const word = words[i];
+
+		// Step 5: For each word, check if adding it would exceed maxLength
+		// Account for: word length + space (if result is not empty) + current result length
+		const spaceLength = result.length > 0 ? 1 : 0;
+		const newLength = word.length + spaceLength + result.length;
+
+		// Step 6: If it would exceed, break the loop
+		if (newLength > maxLength) {
+			break;
+		}
+
+		// Step 7: Otherwise, prepend the word to result (word + ' ' + result)
+		result = result.length > 0 ? word + ' ' + result : word;
+	}
+
+	// Step 8: Return the result
+	return result;
 }
 
 /**
@@ -213,14 +245,133 @@ export function extractLinkedInPosts(_csvContent: string): LinkedInPost[] {
  * - Use .replace(/\s+/g, ' ') to normalize whitespace
  * - Use try/catch to handle errors and return null
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function extractMediumArticle(
-	_htmlContent: string
+	htmlContent: string
 ): MediumArticle | null {
-	// TODO: Implement this function!
-	// YOUR CODE HERE
-	// Remove the underscore from _htmlContent when you start implementing
+	try {
+		// Step 1: Extract the title from the <title> tag
+		const titleMatch = htmlContent.match(/<title>(.*?)<\/title>/);
+		if (!titleMatch || !titleMatch[1]) {
+			return null;
+		}
+		const title = titleMatch[1].trim();
 
-	// Placeholder return - replace with your implementation
-	throw new Error('extractMediumArticle not implemented yet!');
+		// Step 2: Extract the date from the <time> tag's datetime attribute
+		const dateMatch = htmlContent.match(
+			/<time[^>]*class="dt-published"[^>]*datetime="([^"]+)"/
+		);
+		if (!dateMatch || !dateMatch[1]) {
+			return null;
+		}
+		const date = dateMatch[1].trim();
+
+		// Step 3: Extract the URL from the canonical link
+		const urlMatch = htmlContent.match(
+			/<a[^>]*href="([^"]+)"[^>]*class="p-canonical"/
+		);
+		if (!urlMatch || !urlMatch[1]) {
+			return null;
+		}
+		const url = urlMatch[1].trim();
+
+		// Step 4: Extract the text content from the body section
+		// Find the opening tag
+		const bodyStartMatch = htmlContent.match(
+			/<section[^>]*data-field="body"[^>]*class="e-content"[^>]*>/
+		);
+		if (!bodyStartMatch || !bodyStartMatch.index) {
+			return null;
+		}
+
+		// Find the content starting after the opening tag
+		const startPos = bodyStartMatch.index + bodyStartMatch[0].length;
+		let depth = 1;
+		let pos = startPos;
+
+		// Find the matching closing </section> tag by counting opening/closing tags
+		while (pos < htmlContent.length && depth > 0) {
+			const nextOpen = htmlContent.indexOf('<section', pos);
+			const nextClose = htmlContent.indexOf('</section>', pos);
+
+			if (nextClose === -1) {
+				return null; // No closing tag found
+			}
+
+			if (nextOpen !== -1 && nextOpen < nextClose) {
+				depth++;
+				pos = nextOpen + 8; // Move past '<section'
+			} else {
+				depth--;
+				if (depth === 0) {
+					// Found the matching closing tag
+					break;
+				}
+				pos = nextClose + 10; // Move past '</section>'
+			}
+		}
+
+		if (depth !== 0) {
+			return null; // Couldn't find matching closing tag
+		}
+
+		let text = htmlContent.substring(startPos, pos);
+
+		// Remove all HTML tags but keep the text
+		text = text.replace(/<[^>]+>/g, '');
+
+		// Decode HTML entities (basic ones)
+		text = text
+			.replace(/&amp;/g, '&')
+			.replace(/&lt;/g, '<')
+			.replace(/&gt;/g, '>')
+			.replace(/&quot;/g, '"')
+			.replace(/&#39;/g, "'")
+			.replace(/&nbsp;/g, ' ');
+
+		// Clean up whitespace (replace multiple spaces/newlines with single space)
+		text = text.replace(/\s+/g, ' ');
+
+		// Trim the result
+		text = text.trim();
+
+		// Step 5: Extract the author from the footer
+		// Look for <a> tag with class containing "p-author"
+		const authorMatch = htmlContent.match(
+			/<a[^>]*class="[^"]*p-author[^"]*"[^>]*>([^<]+)<\/a>/
+		);
+		const author = authorMatch && authorMatch[1] ? authorMatch[1].trim() : '';
+
+		// Step 6: Extract language (check html lang attribute or meta tag, default to 'en')
+		let language = 'en'; // Default to English
+		const htmlLangMatch = htmlContent.match(/<html[^>]*lang="([^"]+)"/i);
+		if (htmlLangMatch && htmlLangMatch[1]) {
+			language = htmlLangMatch[1].trim();
+		} else {
+			// Check for meta http-equiv content-language
+			const metaLangMatch = htmlContent.match(
+				/<meta[^>]*http-equiv=["']content-language["'][^>]*content=["']([^"']+)["']/i
+			);
+			if (metaLangMatch && metaLangMatch[1]) {
+				language = metaLangMatch[1].trim();
+			}
+		}
+
+		// Validate that we have all required fields
+		if (!title || !text || !date || !url) {
+			return null;
+		}
+
+		return {
+			title,
+			text,
+			date,
+			url,
+			author,
+			source: 'medium',
+			language,
+		};
+	} catch {
+		// Step 5: Return null if extraction fails
+		return null;
+	}
 }
