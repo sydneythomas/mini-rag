@@ -253,6 +253,80 @@ yarn test
 
 ---
 
+## Data Processing & Chunking Strategy
+
+### Chunking Strategy by Content Type
+
+#### Medium Articles
+- **Chunk Size**: 500 characters
+- **Overlap**: 50 characters
+- **Strategy**: Sentence-boundary aware chunking
+  - Splits on sentence boundaries (`.`, `!`, `?`)
+  - Ensures complete sentences (no mid-word breaks)
+  - Creates overlap between chunks using the last N words from the previous chunk
+- **Metadata**: Each chunk includes article title, author, date, URL, source type, and language
+
+#### LinkedIn Posts
+- **Chunk Size**: 500 characters
+- **Overlap**: 50 characters
+- **Strategy**: Same sentence-boundary aware chunking as articles
+- **Metadata**: Each chunk includes post date, likes, URL, and source type
+
+### Embedding & Vector Storage
+
+#### Point IDs in Qdrant
+- **Format**: UUIDs (required by Qdrant)
+- **Generation**: Deterministic UUID v5 generated from chunk ID
+  - Chunk ID format: `${source}-chunk-${chunkIndex}` (e.g., `https://medium.com/@author/article-chunk-0`)
+  - Converted to UUID using: `uuidv5(chunkId, CHUNK_NAMESPACE)`
+  - Same chunk ID always produces the same UUID → enables deduplication
+- **Collections**:
+  - `articles`: Medium article chunks
+  - `linkedin`: LinkedIn post chunks
+- **Embedding Model**: `text-embedding-3-small` (512 dimensions)
+- **Original Chunk ID**: Stored in payload as `originalChunkId` for traceability
+
+#### Upload Process
+1. Extract content from HTML (articles) or CSV (LinkedIn posts)
+2. Chunk text using sentence boundaries
+3. Generate embeddings for each chunk
+4. Convert chunk IDs to deterministic UUIDs
+5. Upload to Qdrant with metadata payload
+
+**Script**: `npm run upload-articles`
+
+### Guardrail System
+
+The application includes a two-layer guardrail system to prevent irrelevant queries from being processed.
+
+#### Implementation
+- **Location**: `app/agents/rag.ts`
+- **Two-Layer Approach**:
+  1. **Guardrail 1 (Qdrant Similarity Check)**: After vector search, checks similarity scores
+     - Threshold: 0.2 (rejects queries with similarity < 0.2)
+     - Logic:
+       - Rejects if both collections (`articles` and `linkedin`) are empty
+       - Rejects if max similarity score < 0.2 (very low relevance)
+  2. **Guardrail 2 (Cohere Rerank Check)**: After reranking, checks relevance scores
+     - Threshold: 0.1 (rejects queries with rerank score < 0.1)
+     - Logic:
+       - Only rejects if rerank score is extremely low AND results exist
+       - Provides secondary validation after initial similarity check
+- **User Feedback**: Both guardrails return the same helpful error message explaining the application's scope
+
+#### Scope
+The application is designed to help users compose LinkedIn posts and articles based on:
+- **Knowledge Base**: Brian's Medium articles and LinkedIn posts
+- **Topics Covered**: Software engineering, coding bootcamps, JavaScript, React, career advice, technical interviews, and related professional development topics
+
+#### User Feedback
+When a query is rejected by either guardrail, users receive a clear message explaining:
+- Why the query can't be processed
+- What the application is designed for
+- Examples of valid topics to ask about
+
+---
+
 ## 🚀 Want to Build This With Me?
 
 This repo is a preview of the full hands-on program where we build AI applications together as a group. You'll get live support, code reviews, and build production-ready AI systems alongside other developers.

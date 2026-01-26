@@ -19,20 +19,31 @@ import dotenv from 'dotenv';
 dotenv.config()
 import fs from 'fs';
 import path from 'path';
+import { v5 as uuidv5 } from 'uuid';
 import {
     extractMediumArticle,
-    // extractLinkedInPosts, // TODO: Uncomment when implemented
+    extractLinkedInPosts,
     chunkText,
     type Chunk,
 } from '../libs/chunking';
 import { openaiClient } from '../libs/openai/openai';
 import { qdrantClient } from '../libs/qdrant';
 
+// Create a namespace UUID for deterministic UUID generation
+// This can be any fixed UUID - we'll use a standard namespace UUID
+const CHUNK_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'; // Standard namespace UUID
+
+// Helper function to convert chunk ID to deterministic UUID
+// This ensures the same chunk ID always produces the same UUID for deduplication
+function chunkIdToUUID(chunkId: string): string {
+    return uuidv5(chunkId, CHUNK_NAMESPACE);
+}
+
 
 
 const DATA_DIR = path.join(process.cwd(), 'app/scripts/data');
 const ARTICLES_DIR = path.join(DATA_DIR, 'articles');
-// const LINKEDIN_CSV = path.join(DATA_DIR, 'brian_posts.csv');
+const LINKEDIN_CSV = path.join(DATA_DIR, 'brian_posts.csv');
 
 /**
  * Processes all Medium articles from the articles directory
@@ -89,36 +100,37 @@ async function processMediumArticles(): Promise<Chunk[]> {
     return allChunks;
 }
 
-// /**
-//  * Processes LinkedIn posts from CSV file
-//  */
-// async function processLinkedInPosts(): Promise<Chunk[]> {
-// 	console.log('💼 Processing LinkedIn posts...');
+/**
+ * Processes LinkedIn posts from CSV file
+ */
+async function processLinkedInPosts(): Promise<Chunk[]> {
+    console.log('💼 Processing LinkedIn posts...');
 
-// 	const csvContent = fs.readFileSync(LINKEDIN_CSV, 'utf-8');
-// 	const posts = extractLinkedInPosts(csvContent);
+    const csvContent = fs.readFileSync(LINKEDIN_CSV, 'utf-8');
+    const posts = extractLinkedInPosts(csvContent);
 
-// 	console.log(`Found ${posts.length} LinkedIn posts`);
+    console.log(`Found ${posts.length} LinkedIn posts`);
 
-// 	const allChunks: Chunk[] = [];
+    const allChunks: Chunk[] = [];
 
-// 	for (const post of posts) {
-// 		// Chunk the post text
-// 		const chunks = chunkText(post.text, 500, 50, post.url);
+    for (const post of posts) {
+        // Chunk the post text
+        const chunks = chunkText(post.text, 500, 50, post.url);
 
-// 		// Add post metadata to each chunk
-// 		chunks.forEach((chunk) => {
-// 			chunk.metadata.date = post.date;
-// 			chunk.metadata.likes = post.likes;
-// 			chunk.metadata.postSource = 'linkedin';
-// 		});
+        // Add post metadata to each chunk
+        chunks.forEach((chunk) => {
+            chunk.metadata.date = post.date;
+            chunk.metadata.likes = post.likes;
+            chunk.metadata.contentType = 'linkedin';
+            chunk.metadata.url = post.url;
+        });
 
-// 		allChunks.push(...chunks);
-// 	}
+        allChunks.push(...chunks);
+    }
 
-// 	console.log(`✅ Created ${allChunks.length} chunks from LinkedIn posts`);
-// 	return allChunks;
-// }
+    console.log(`✅ Created ${allChunks.length} chunks from LinkedIn posts`);
+    return allChunks;
+}
 
 /**
  * Main function
@@ -130,6 +142,9 @@ async function main() {
         // Process Medium articles
         const mediumChunks = await processMediumArticles();
 
+        // Embed and upload Medium articles
+        console.log('\n📤 Embedding and uploading Medium articles...');
+        let uploadedArticles = 0;
         for (const chunk of mediumChunks) {
             const embeddings = await openaiClient.embeddings.create({
                 model: 'text-embedding-3-small',
@@ -140,30 +155,64 @@ async function main() {
             await qdrantClient.upsert('articles', {
                 points: [
                     {
-                        id: crypto.randomUUID(),
+                        id: chunkIdToUUID(chunk.id), // Convert to UUID for Qdrant compatibility
                         vector: embeddings.data[0].embedding,
-                        payload: { ...chunk.metadata, content: chunk.content }
+                        payload: {
+                            ...chunk.metadata,
+                            content: chunk.content,
+                            originalChunkId: chunk.id // Store original ID in payload for traceability
+                        }
                     },
                 ],
             });
+            uploadedArticles++;
+            if (uploadedArticles % 50 === 0) {
+                console.log(`   Uploaded ${uploadedArticles}/${mediumChunks.length} article chunks...`);
+            }
         }
-
-
+        console.log(`✅ Uploaded ${uploadedArticles} article chunks to Qdrant`);
 
         // Process LinkedIn posts
-        // TODO: Uncomment when extractLinkedInPosts is implemented
-        // const linkedInChunks = await processLinkedInPosts();
+        const linkedInChunks = await processLinkedInPosts();
+
+        // Embed and upload LinkedIn posts
+        console.log('\n📤 Embedding and uploading LinkedIn posts...');
+        let uploadedPosts = 0;
+        for (const chunk of linkedInChunks) {
+            const embeddings = await openaiClient.embeddings.create({
+                model: 'text-embedding-3-small',
+                dimensions: 512,
+                input: chunk.content,
+            });
+
+            await qdrantClient.upsert('linkedin', {
+                points: [
+                    {
+                        id: chunkIdToUUID(chunk.id), // Convert to UUID for Qdrant compatibility
+                        vector: embeddings.data[0].embedding,
+                        payload: {
+                            ...chunk.metadata,
+                            content: chunk.content,
+                            originalChunkId: chunk.id // Store original ID in payload for traceability
+                        }
+                    },
+                ],
+            });
+            uploadedPosts++;
+            if (uploadedPosts % 50 === 0) {
+                console.log(`   Uploaded ${uploadedPosts}/${linkedInChunks.length} LinkedIn post chunks...`);
+            }
+        }
+        console.log(`✅ Uploaded ${uploadedPosts} LinkedIn post chunks to Qdrant`);
 
         // Combine all chunks
-        const allChunks = [...mediumChunks]; // TODO: Add linkedInChunks when ready
+        const allChunks = [...mediumChunks, ...linkedInChunks];
 
         console.log(`\n📊 Summary:`);
         console.log(`   Medium chunks: ${mediumChunks.length}`);
-        // console.log(`   LinkedIn chunks: ${linkedInChunks.length}`);
+        console.log(`   LinkedIn chunks: ${linkedInChunks.length}`);
         console.log(`   Total chunks: ${allChunks.length}`);
-
-        // TODO: Upload to Qdrant
-        console.log('\n⏳ Qdrant upload not yet implemented');
+        console.log(`   ✅ Uploaded to Qdrant: ${uploadedArticles} articles + ${uploadedPosts} LinkedIn posts`);
 
         // For now, save to a JSON file for inspection
         const outputPath = path.join(DATA_DIR, 'processed_chunks.json');

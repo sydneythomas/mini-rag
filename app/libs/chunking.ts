@@ -23,11 +23,12 @@ export type LinkedInPost = {
 // TODO: Define MediumArticle type
 // Should have: title (string), text (string), date (string), url (string)
 export type MediumArticle = {
-	title: string;
+	// metadata
 	text: string;
-	date: string;
 	url: string;
 	author: string;
+	title: string;
+	date: string;
 	source: string;
 	language: string;
 };
@@ -141,37 +142,34 @@ export function chunkText(
  * 8. Return the result
  */
 function getLastWords(text: string, maxLength: number): string {
-	// Step 1: Check if text.length <= maxLength, if so return text
+	// 1. Check if text.length <= maxLength, if so return text
 	if (text.length <= maxLength) {
 		return text;
 	}
+	// 2. Split text into words using .split(' ')
+	const wordList: string[] = text.split(' ');
+	// 3. Start with empty result string
+	let resultString: string = '';
+	// 4. Loop through words backwards
+	for (let i = wordList.length - 1; i >= 0; i--) {
+		// 5. For each word, check if adding it would exceed maxLength.
+		let newWord: string = wordList[i];
 
-	// Step 2: Split text into words using .split(' ')
-	const words = text.split(' ');
-
-	// Step 3: Start with empty result string
-	let result = '';
-
-	// Step 4: Loop through words BACKWARDS (from end to start)
-	for (let i = words.length - 1; i >= 0; i--) {
-		const word = words[i];
-
-		// Step 5: For each word, check if adding it would exceed maxLength
-		// Account for: word length + space (if result is not empty) + current result length
-		const spaceLength = result.length > 0 ? 1 : 0;
-		const newLength = word.length + spaceLength + result.length;
-
-		// Step 6: If it would exceed, break the loop
-		if (newLength > maxLength) {
-			break;
+		// 5a. Decide whether the new word needs a space after it
+		//     in the result string.
+		if (resultString.length) {
+			newWord = wordList[i] + ' ';
 		}
-
-		// Step 7: Otherwise, prepend the word to result (word + ' ' + result)
-		result = result.length > 0 ? word + ' ' + result : word;
+		// 6. If it would exceed, break the loop
+		// 7. Otherwise, prepend the word to result
+		if (resultString.length + newWord.length > maxLength) {
+			break;
+		} else {
+			resultString = newWord + resultString;
+		}
 	}
-
-	// Step 8: Return the result
-	return result;
+	// 8. Return the result
+	return resultString;
 }
 
 /**
@@ -204,7 +202,6 @@ function getLastWords(text: string, maxLength: number): string {
  * - Extract the values at the correct column indices
  * - Convert numReactions to a number using parseInt()
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function extractLinkedInPosts(csvContent: string): LinkedInPost[] {
 	// Parse CSV records character-by-character to handle multiline quoted fields
 	const records: string[][] = [];
@@ -243,7 +240,6 @@ export function extractLinkedInPosts(csvContent: string): LinkedInPost[] {
 		}
 	}
 
-	return result;
 	// Add final record if exists
 	if (currentRecord.length > 0 || currentField) {
 		currentRecord.push(currentField);
