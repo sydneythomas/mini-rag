@@ -22,5 +22,16 @@ export async function linkedInAgent(
 	// Include system prompt and messages from request.messages
 	// Return the stream
 
-	throw new Error('LinkedIn agent not implemented yet!');
+	return streamText({
+		model: openai('ft:gpt-4o-mini-2024-07-18:personal::COAiNLWZ'),
+		temperature: 0.8,
+		messages: [
+			{
+				role: 'system',
+				content: `
+				Polish the linkedin post to make it more engaging. Here is the original post: ${request.query}
+				`,
+			},
+		],
+	});
 }

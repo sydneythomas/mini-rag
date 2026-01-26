@@ -14,7 +14,10 @@ export type Chunk = {
 // TODO: Define LinkedInPost type
 // Should have: text (string), date (string), url (string), likes (number)
 export type LinkedInPost = {
-	// YOUR CODE HERE
+	text: string;
+	date: string;
+	url: string;
+	likes: number;
 };
 
 // TODO: Define MediumArticle type
@@ -202,13 +205,96 @@ function getLastWords(text: string, maxLength: number): string {
  * - Convert numReactions to a number using parseInt()
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function extractLinkedInPosts(_csvContent: string): LinkedInPost[] {
-	// TODO: Implement this function!
-	// YOUR CODE HERE
-	// Remove the underscore from _csvContent when you start implementing
+export function extractLinkedInPosts(csvContent: string): LinkedInPost[] {
+	// Parse CSV records character-by-character to handle multiline quoted fields
+	const records: string[][] = [];
+	let currentRecord: string[] = [];
+	let currentField = '';
+	let insideQuotes = false;
 
-	// Placeholder return - replace with your implementation
-	throw new Error('extractLinkedInPosts not implemented yet!');
+	for (let i = 0; i < csvContent.length; i++) {
+		const char = csvContent[i];
+		const nextChar = csvContent[i + 1];
+
+		if (char === '"') {
+			// Handle escaped quotes ("")
+			if (insideQuotes && nextChar === '"') {
+				currentField += '"';
+				i++; // Skip next quote
+			} else {
+				// Toggle quote state
+				insideQuotes = !insideQuotes;
+			}
+		} else if (char === ',' && !insideQuotes) {
+			// End of field
+			currentRecord.push(currentField);
+			currentField = '';
+		} else if (char === '\n' && !insideQuotes) {
+			// End of record (only when not inside quotes)
+			currentRecord.push(currentField);
+			if (currentRecord.some((f) => f.trim())) {
+				// Only add non-empty records
+				records.push(currentRecord);
+			}
+			currentRecord = [];
+			currentField = '';
+		} else {
+			currentField += char;
+		}
+	}
+
+	return result;
+	// Add final record if exists
+	if (currentRecord.length > 0 || currentField) {
+		currentRecord.push(currentField);
+		if (currentRecord.some((f) => f.trim())) {
+			records.push(currentRecord);
+		}
+	}
+
+	if (records.length < 2) return [];
+
+	// Parse header to find column indices
+	const header = records[0];
+	const textIndex = header.indexOf('text');
+	const dateIndex = header.indexOf('createdAt (TZ=America/Los_Angeles)');
+	const urlIndex = header.indexOf('link');
+	const likesIndex = header.indexOf('numReactions');
+
+	// Validate that we found all required columns
+	if (
+		textIndex === -1 ||
+		dateIndex === -1 ||
+		urlIndex === -1 ||
+		likesIndex === -1
+	) {
+		throw new Error('Missing required columns in CSV');
+	}
+
+	const posts: LinkedInPost[] = [];
+
+	// Process each data row (skip header)
+	for (let i = 1; i < records.length; i++) {
+		const fields = records[i];
+
+		// Make sure we have enough fields
+		if (
+			fields.length <= Math.max(textIndex, dateIndex, urlIndex, likesIndex)
+		) {
+			continue;
+		}
+
+		const post: LinkedInPost = {
+			text: fields[textIndex],
+			date: fields[dateIndex],
+			url: fields[urlIndex],
+			likes: parseInt(fields[likesIndex]) || 0,
+		};
+
+		posts.push(post);
+	}
+
+	return posts;
 }
 
 /**
@@ -248,130 +334,53 @@ export function extractLinkedInPosts(_csvContent: string): LinkedInPost[] {
 export function extractMediumArticle(
 	htmlContent: string
 ): MediumArticle | null {
-	try {
-		// Step 1: Extract the title from the <title> tag
-		const titleMatch = htmlContent.match(/<title>(.*?)<\/title>/);
-		if (!titleMatch || !titleMatch[1]) {
-			return null;
-		}
-		const title = titleMatch[1].trim();
+	// 1. Extract title from <title> tag
+	const titleMatch = htmlContent.match(/<title>(.*?)<\/title>/);
+	if (!titleMatch) return null;
+	const title = titleMatch[1];
 
-		// Step 2: Extract the date from the <time> tag's datetime attribute
-		const dateMatch = htmlContent.match(
-			/<time[^>]*class="dt-published"[^>]*datetime="([^"]+)"/
-		);
-		if (!dateMatch || !dateMatch[1]) {
-			return null;
-		}
-		const date = dateMatch[1].trim();
+	// 2. Extract date from <time> tag's datetime attribute
+	const dateMatch = htmlContent.match(
+		/<time[^>]*class="dt-published"[^>]*datetime="([^"]*)"/
+	);
+	if (!dateMatch) return null;
+	const date = dateMatch[1];
 
-		// Step 3: Extract the URL from the canonical link
-		const urlMatch = htmlContent.match(
-			/<a[^>]*href="([^"]+)"[^>]*class="p-canonical"/
-		);
-		if (!urlMatch || !urlMatch[1]) {
-			return null;
-		}
-		const url = urlMatch[1].trim();
+	// 3. Extract URL from canonical link
+	const urlMatch = htmlContent.match(
+		/<a[^>]*href="([^"]*)"[^>]*class="p-canonical"/
+	);
+	if (!urlMatch) return null;
+	const url = urlMatch[1];
 
-		// Step 4: Extract the text content from the body section
-		// Find the opening tag
-		const bodyStartMatch = htmlContent.match(
-			/<section[^>]*data-field="body"[^>]*class="e-content"[^>]*>/
-		);
-		if (!bodyStartMatch || !bodyStartMatch.index) {
-			return null;
-		}
+	// 4. Extract text content from body section
+	const bodyMatch = htmlContent.match(
+		/<section[^>]*data-field="body"[^>]*class="e-content"[^>]*>([\s\S]*?)<\/section>/
+	);
+	if (!bodyMatch) return null;
 
-		// Find the content starting after the opening tag
-		const startPos = bodyStartMatch.index + bodyStartMatch[0].length;
-		let depth = 1;
-		let pos = startPos;
+	// Remove HTML tags
+	let text = bodyMatch[1].replace(/<[^>]+>/g, '');
+	// Normalize whitespace
+	text = text.replace(/\s+/g, ' ').trim();
 
-		// Find the matching closing </section> tag by counting opening/closing tags
-		while (pos < htmlContent.length && depth > 0) {
-			const nextOpen = htmlContent.indexOf('<section', pos);
-			const nextClose = htmlContent.indexOf('</section>', pos);
+	// Extract author from footer anchor tag with class p-author h-card
+	const authorMatch = htmlContent.match(
+		/<a[^>]*class="p-author h-card"[^>]*>([^<]*)<\/a>/
+	);
+	const author = authorMatch ? authorMatch[1] : 'Unknown';
 
-			if (nextClose === -1) {
-				return null; // No closing tag found
-			}
+	// Extract language (optional, from html lang attribute or default)
+	const langMatch = htmlContent.match(/<html[^>]*lang="([^"]*)"/);
+	const language = langMatch ? langMatch[1] : 'en';
 
-			if (nextOpen !== -1 && nextOpen < nextClose) {
-				depth++;
-				pos = nextOpen + 8; // Move past '<section'
-			} else {
-				depth--;
-				if (depth === 0) {
-					// Found the matching closing tag
-					break;
-				}
-				pos = nextClose + 10; // Move past '</section>'
-			}
-		}
-
-		if (depth !== 0) {
-			return null; // Couldn't find matching closing tag
-		}
-
-		let text = htmlContent.substring(startPos, pos);
-
-		// Remove all HTML tags but keep the text
-		text = text.replace(/<[^>]+>/g, '');
-
-		// Decode HTML entities (basic ones)
-		text = text
-			.replace(/&amp;/g, '&')
-			.replace(/&lt;/g, '<')
-			.replace(/&gt;/g, '>')
-			.replace(/&quot;/g, '"')
-			.replace(/&#39;/g, "'")
-			.replace(/&nbsp;/g, ' ');
-
-		// Clean up whitespace (replace multiple spaces/newlines with single space)
-		text = text.replace(/\s+/g, ' ');
-
-		// Trim the result
-		text = text.trim();
-
-		// Step 5: Extract the author from the footer
-		// Look for <a> tag with class containing "p-author"
-		const authorMatch = htmlContent.match(
-			/<a[^>]*class="[^"]*p-author[^"]*"[^>]*>([^<]+)<\/a>/
-		);
-		const author = authorMatch && authorMatch[1] ? authorMatch[1].trim() : '';
-
-		// Step 6: Extract language (check html lang attribute or meta tag, default to 'en')
-		let language = 'en'; // Default to English
-		const htmlLangMatch = htmlContent.match(/<html[^>]*lang="([^"]+)"/i);
-		if (htmlLangMatch && htmlLangMatch[1]) {
-			language = htmlLangMatch[1].trim();
-		} else {
-			// Check for meta http-equiv content-language
-			const metaLangMatch = htmlContent.match(
-				/<meta[^>]*http-equiv=["']content-language["'][^>]*content=["']([^"']+)["']/i
-			);
-			if (metaLangMatch && metaLangMatch[1]) {
-				language = metaLangMatch[1].trim();
-			}
-		}
-
-		// Validate that we have all required fields
-		if (!title || !text || !date || !url) {
-			return null;
-		}
-
-		return {
-			title,
-			text,
-			date,
-			url,
-			author,
-			source: 'medium',
-			language,
-		};
-	} catch {
-		// Step 5: Return null if extraction fails
-		return null;
-	}
+	return {
+		text,
+		url,
+		author,
+		title,
+		date,
+		source: 'medium',
+		language,
+	};
 }
